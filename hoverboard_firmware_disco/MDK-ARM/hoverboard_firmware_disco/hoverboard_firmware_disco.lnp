@@ -1,0 +1,26 @@
+--cpu=Cortex-M4.fp
+"hoverboard_firmware_disco\system_stm32f4xx.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_flash_ex.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_flash.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_tim_ex.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_dma_ex.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_pwr.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_dma.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_rcc_ex.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_flash_ramfunc.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_tim.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_pwr_ex.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_cortex.o"
+"hoverboard_firmware_disco\stm32f4xx_hal.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_rcc.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_uart.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_gpio.o"
+"hoverboard_firmware_disco\stm32f4xx_hal_msp.o"
+"hoverboard_firmware_disco\main.o"
+"hoverboard_firmware_disco\stm32f4xx_it.o"
+"hoverboard_firmware_disco\bldc_motors.o"
+"hoverboard_firmware_disco\startup_stm32f469xx.o"
+--library_type=microlib --strict --scatter "hoverboard_firmware_disco\hoverboard_firmware_disco.sct"
+--diag_suppress=L6329 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "hoverboard_firmware_disco.map" -o hoverboard_firmware_disco\hoverboard_firmware_disco.axf

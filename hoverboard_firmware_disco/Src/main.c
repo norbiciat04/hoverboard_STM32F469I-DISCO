@@ -41,9 +41,15 @@
 
 /* USER CODE BEGIN Includes */
 
+#include <stdio.h>
+#include <math.h>
+#include "BLDC_Motors.h"
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim12;
+
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
@@ -55,6 +61,9 @@ UART_HandleTypeDef huart3;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_TIM12_Init(void);                                    
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+                                
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -91,9 +100,19 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART3_UART_Init();
+  MX_TIM12_Init();
 
   /* USER CODE BEGIN 2 */
-
+	
+  //BLDC_Motors Init
+  initializeBLDC_Motors(&htim12, TIM_CHANNEL_1, TIM_CHANNEL_2);
+  setBLDC_MotorsPower(0,0);
+	
+  uint8_t i = 4;
+  uint8_t data[50]; // Tablica przechowujaca wysylana wiadomosc.
+  uint16_t size = 0; // Rozmiar wysylanej wiadomosci
+  size = sprintf(data, "kutaczany %d\r\n", i); // Stworzenie wiadomosci do wyslania oraz przypisanie ilosci wysylanych znakow do zmiennej size.
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -103,7 +122,28 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+		
+	  HAL_UART_Transmit_IT(&huart3, data, size);
+	  HAL_Delay(1000);
 
+
+
+
+	  setBLDC_MotorsPower(10, 10);
+
+	  /*
+//	  setBLDC_MotorsDIR(0, 0);
+//	  HAL_Delay(1000);
+//	  setBLDC_MotorsDIR(1, 1);
+//	  HAL_Delay(1000);
+
+	  setBLDC_MotorsDIR(1, 0);
+	  HAL_Delay(1000);
+
+//	  send_string("Right");
+	  setBLDC_MotorsDIR(0, 1);
+	  */
+		
   }
   /* USER CODE END 3 */
 
@@ -158,6 +198,40 @@ void SystemClock_Config(void)
 
   /* SysTick_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+}
+
+/* TIM12 init function */
+static void MX_TIM12_Init(void)
+{
+
+  TIM_OC_InitTypeDef sConfigOC;
+
+  htim12.Instance = TIM12;
+  htim12.Init.Prescaler = 16;
+  htim12.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim12.Init.Period = 100-1;
+  htim12.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  if (HAL_TIM_PWM_Init(&htim12) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim12, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  if (HAL_TIM_PWM_ConfigChannel(&htim12, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  HAL_TIM_MspPostInit(&htim12);
+
 }
 
 /* USART3 init function */
@@ -295,6 +369,9 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, LEFT_MOTOR_DIR_Pin|RIGHT_MOTOR_DIR_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, OTG_FS1_PowerSwitchOn_Pin|EXT_RESET_Pin, GPIO_PIN_RESET);
@@ -515,6 +592,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF10_QSPI;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : LEFT_MOTOR_DIR_Pin RIGHT_MOTOR_DIR_Pin */
+  GPIO_InitStruct.Pin = LEFT_MOTOR_DIR_Pin|RIGHT_MOTOR_DIR_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SDNWE_Pin */
   GPIO_InitStruct.Pin = SDNWE_Pin;

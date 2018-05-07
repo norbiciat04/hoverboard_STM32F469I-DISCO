@@ -75,6 +75,75 @@ void HAL_MspInit(void)
   /* USER CODE END MspInit 1 */
 }
 
+void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
+{
+
+  if(htim_pwm->Instance==TIM12)
+  {
+  /* USER CODE BEGIN TIM12_MspInit 0 */
+
+  /* USER CODE END TIM12_MspInit 0 */
+    /* Peripheral clock enable */
+    __HAL_RCC_TIM12_CLK_ENABLE();
+  /* USER CODE BEGIN TIM12_MspInit 1 */
+
+  /* USER CODE END TIM12_MspInit 1 */
+  }
+
+}
+
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
+{
+
+  GPIO_InitTypeDef GPIO_InitStruct;
+  if(htim->Instance==TIM12)
+  {
+  /* USER CODE BEGIN TIM12_MspPostInit 0 */
+
+  /* USER CODE END TIM12_MspPostInit 0 */
+  
+    /**TIM12 GPIO Configuration    
+    PH6     ------> TIM12_CH1
+    PB15     ------> TIM12_CH2 
+    */
+    GPIO_InitStruct.Pin = LEFT_MOTOR_PWM_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF9_TIM12;
+    HAL_GPIO_Init(LEFT_MOTOR_PWM_GPIO_Port, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = RIGHT_MOTOR_PWM_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF9_TIM12;
+    HAL_GPIO_Init(RIGHT_MOTOR_PWM_GPIO_Port, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN TIM12_MspPostInit 1 */
+
+  /* USER CODE END TIM12_MspPostInit 1 */
+  }
+
+}
+
+void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef* htim_pwm)
+{
+
+  if(htim_pwm->Instance==TIM12)
+  {
+  /* USER CODE BEGIN TIM12_MspDeInit 0 */
+
+  /* USER CODE END TIM12_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_TIM12_CLK_DISABLE();
+  /* USER CODE BEGIN TIM12_MspDeInit 1 */
+
+  /* USER CODE END TIM12_MspDeInit 1 */
+  }
+
+}
+
 void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 {
 

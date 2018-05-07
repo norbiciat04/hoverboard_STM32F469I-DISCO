@@ -176,6 +176,8 @@
 #define QSPI_BK1_IO1_GPIO_Port GPIOF
 #define QSPI_BK1_IO0_Pin GPIO_PIN_8
 #define QSPI_BK1_IO0_GPIO_Port GPIOF
+#define LEFT_MOTOR_DIR_Pin GPIO_PIN_3
+#define LEFT_MOTOR_DIR_GPIO_Port GPIOC
 #define D0_Pin GPIO_PIN_14
 #define D0_GPIO_Port GPIOD
 #define D14_Pin GPIO_PIN_9
@@ -184,6 +186,8 @@
 #define D13_GPIO_Port GPIOD
 #define SDNWE_Pin GPIO_PIN_0
 #define SDNWE_GPIO_Port GPIOC
+#define RIGHT_MOTOR_DIR_Pin GPIO_PIN_2
+#define RIGHT_MOTOR_DIR_GPIO_Port GPIOC
 #define OTG_FS1_PowerSwitchOn_Pin GPIO_PIN_2
 #define OTG_FS1_PowerSwitchOn_GPIO_Port GPIOB
 #define A6_Pin GPIO_PIN_12
@@ -226,6 +230,8 @@
 #define D11_GPIO_Port GPIOE
 #define STLK_RX_Pin GPIO_PIN_10
 #define STLK_RX_GPIO_Port GPIOB
+#define LEFT_MOTOR_PWM_Pin GPIO_PIN_6
+#define LEFT_MOTOR_PWM_GPIO_Port GPIOH
 #define D16_Pin GPIO_PIN_8
 #define D16_GPIO_Port GPIOH
 #define D18_Pin GPIO_PIN_10
@@ -246,6 +252,8 @@
 #define D10_GPIO_Port GPIOE
 #define STLK_TX_Pin GPIO_PIN_11
 #define STLK_TX_GPIO_Port GPIOB
+#define RIGHT_MOTOR_PWM_Pin GPIO_PIN_15
+#define RIGHT_MOTOR_PWM_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
