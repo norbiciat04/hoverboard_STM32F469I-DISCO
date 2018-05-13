@@ -44,10 +44,14 @@
 #include <stdio.h>
 #include <math.h>
 #include "BLDC_Motors.h"
+#include "tm_stm32_mpu6050.h"
+#include "tm_stm32_delay.h"
 
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c1;
+
 TIM_HandleTypeDef htim12;
 
 UART_HandleTypeDef huart3;
@@ -61,7 +65,9 @@ UART_HandleTypeDef huart3;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
-static void MX_TIM12_Init(void);                                    
+static void MX_TIM12_Init(void);
+static void MX_I2C1_Init(void);
+                                    
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
                                 
 
@@ -101,17 +107,48 @@ int main(void)
   MX_GPIO_Init();
   MX_USART3_UART_Init();
   MX_TIM12_Init();
+  MX_I2C1_Init();
 
   /* USER CODE BEGIN 2 */
+
+  //uart example
+  uint8_t i = 9;
+  uint8_t data[50]; // Tablica przechowujaca wysylana wiadomosc.
+  uint16_t size = 0; // Rozmiar wysylanej wiadomosci
+  size = sprintf(data, "kutaczan %d\r\n", i); // Stworzenie wiadomosci do wyslania oraz przypisanie ilosci wysylanych znakow do zmiennej size.
+
 
   //BLDC_Motors Init
   initializeBLDC_Motors(&htim12, TIM_CHANNEL_1, TIM_CHANNEL_2);
   setBLDC_MotorsPower(0,0);
 
-  uint8_t i = 1;
-  uint8_t data[50]; // Tablica przechowujaca wysylana wiadomosc.
-  uint16_t size = 0; // Rozmiar wysylanej wiadomosci
-  size = sprintf(data, "kutacza %d\r\n", i); // Stworzenie wiadomosci do wyslania oraz przypisanie ilosci wysylanych znakow do zmiennej size.
+  //MPU6050 Init
+
+  TM_MPU6050_t MPU6050_Data0;
+  TM_MPU6050_t MPU6050_Data1;
+  uint8_t sensor1 = 0, sensor2 = 0;
+  char str[120];
+
+  // Initialize MPU6050 sensor 0, address = 0xD0, AD0 pin on sensor is low
+  if (TM_MPU6050_Init(&MPU6050_Data0, TM_MPU6050_Device_0, TM_MPU6050_Accelerometer_8G, TM_MPU6050_Gyroscope_250s) == TM_MPU6050_Result_Ok) {
+          // Display message to user
+  //        TM_USART_Puts(USART1, "MPU6050 sensor 0 is ready to use!\n");
+          size = sprintf(str, "MPU6050 sensor 0 is ready to use!\n", i);
+    	  HAL_UART_Transmit(&huart3, str, size, 1000);
+          // Sensor 1 OK
+          sensor1 = 1;
+  }
+
+  // Initialize MPU6050 sensor 1, address = 0xD2, AD0 pin on sensor is high
+  if (TM_MPU6050_Init(&MPU6050_Data1, TM_MPU6050_Device_1, TM_MPU6050_Accelerometer_8G, TM_MPU6050_Gyroscope_250s) == TM_MPU6050_Result_Ok) {
+        // Display message to user
+    //    TM_USART_Puts(USART1, "MPU6050 sensor 1 is ready to use!\n");
+        size = sprintf(str, "MPU6050 sensor 1 is ready to use!\n", i);
+  	  HAL_UART_Transmit(&huart3, str, size, 1000);
+        // Sensor 2 OK
+        sensor2 = 1;
+  }
+
 
 
   /* USER CODE END 2 */
@@ -123,14 +160,218 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+/*
+      size = sprintf(data, "kutaczan %d\r\n", 4);
+      HAL_UART_Transmit_IT(&huart3, data, size);
+	  HAL_Delay(500);
+*/
 
+
+	       if (TM_DELAY_Time() >= 100) {
+	           TM_DELAY_SetTime(0);
+               TM_MPU6050_ReadAll(&MPU6050_Data0);
+			   size = sprintf(str, "%d %d %d %d %d %d\r\n",
+					   MPU6050_Data0.Accelerometer_X,
+					   MPU6050_Data0.Accelerometer_Y,
+					   MPU6050_Data0.Accelerometer_Z,
+	                   MPU6050_Data0.Gyroscope_X,
+	                   MPU6050_Data0.Gyroscope_Y,
+	                   MPU6050_Data0.Gyroscope_Z
+					   );
+			   HAL_UART_Transmit_IT(&huart3, str, size);
+	       }
+/*
+      //Every 500ms
+       if (TM_DELAY_Time() >= 500) {
+           // Reset time
+           TM_DELAY_SetTime(0);
+
+           //vIf sensor 0 is connected
+           if (sensor1) {
+               // Read all data from sensor 0
+               TM_MPU6050_ReadAll(&MPU6050_Data0);
+
+               // Format data
+               size = sprintf(str, "\r\n R \r\n 0 Acc: X:%d   Y:%d   Z:%d \r\n Gyr: X:%d   Y:%d   Z:%d \r\n Temp: %3.4f\r\n",
+                   MPU6050_Data0.Accelerometer_X,
+                   MPU6050_Data0.Accelerometer_Y,
+                   MPU6050_Data0.Accelerometer_Z,
+                   MPU6050_Data0.Gyroscope_X,
+                   MPU6050_Data0.Gyroscope_Y,
+                   MPU6050_Data0.Gyroscope_Z,
+                   MPU6050_Data0.Temperature
+               );
+
+               // Show to usart
+      //         TM_USART_Puts(USART1, str);
+               HAL_UART_Transmit_IT(&huart3, str, size);
+        //       HAL_UART_Transmit(&huart3, str, size, 500);
+           }
+
+           // If sensor 1 is connected
+           if (sensor2) {
+               // Read all data from sensor 1
+               TM_MPU6050_ReadAll(&MPU6050_Data1);
+
+               // Format data
+               size = sprintf(str, "\r\n R \r\n 1 Acc: X:%d   Y:%d   Z:%d \r\n Gyr: X:%d   Y:%d   Z:%d \r\n Temp: %3.4f\r\n",
+                   MPU6050_Data1.Accelerometer_X,
+                   MPU6050_Data1.Accelerometer_Y,
+                   MPU6050_Data1.Accelerometer_Z,
+                   MPU6050_Data1.Gyroscope_X,
+                   MPU6050_Data1.Gyroscope_Y,
+                   MPU6050_Data1.Gyroscope_Z,
+                   MPU6050_Data1.Temperature
+               );
+
+               // Show to usart
+     //          TM_USART_Puts(USART1, str);
+      //         HAL_UART_Transmit_IT(&huart3, str, size);
+               HAL_UART_Transmit(&huart3, str, size, 500);
+           }
+       }
+
+*/
+
+/*
+	  TM_MPU6050_ReadAccelerometer(&MPU6050_Data0);
+
+       	   if(MPU6050_Data0.Accelerometer_Y>0)
+       	   {
+       		   R_MOT_FORWARD;
+       		   Set_Right_Motor_Speed(MPU6050_Data0.Accelerometer_Y/40);
+       	   } else if(MPU6050_Data0.Accelerometer_Y<0)
+       	   {
+       		   R_MOT_BACKWARD;
+       		   Set_Right_Motor_Speed(MPU6050_Data0.Accelerometer_Y/-40);
+       	   }
+/*
+	   TM_MPU6050_ReadAccelerometer(&MPU6050_Data1);
+
+		   if(MPU6050_Data1.Accelerometer_Y>0)
+		   {
+			   L_MOT_BACKWARD;
+			   Set_Left_Motor_Speed(MPU6050_Data1.Accelerometer_Y/40);
+		   } else if(MPU6050_Data1.Accelerometer_Y<0)
+		   {
+			   L_MOT_FORWARD;
+			   Set_Left_Motor_Speed(MPU6050_Data1.Accelerometer_Y/-40);
+		   }
+*/
+
+ 	//  setBLDC_MotorsPower(15, 15);
+
+/*
+	   Set_Left_Motor_Speed(1);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(5);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(10);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(15);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(20);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(25);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(30);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(35);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(40);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(45);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(50);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(55);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(60);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(65);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(70);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(75);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(80);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(90);
+	   HAL_Delay(30);
+	   Set_Left_Motor_Speed(100);
+	   HAL_Delay(5000);
+	   Set_Left_Motor_Speed(90);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(80);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(70);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(60);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(50);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(40);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(30);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(10);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(5);
+	   HAL_Delay(1000);
+	   /*
+	   Set_Left_Motor_Speed(15);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(16);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(17);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(18);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(17);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(16);
+	   HAL_Delay(50);
+	   Set_Left_Motor_Speed(15);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(14);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(13);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(12);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(11);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(10);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(9);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(8);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(7);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(6);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(5);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(4);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(3);
+	   HAL_Delay(10);
+	   Set_Left_Motor_Speed(2);
+	   HAL_Delay(10);
+*/
+
+	  /*
 	  HAL_UART_Transmit_IT(&huart3, data, size);
 	  HAL_Delay(1000);
 
 
 
 
-	  setBLDC_MotorsPower(10, 10);
+	  setBLDC_MotorsDIR(1, 1);
+	  setBLDC_MotorsPower(15, 15);
+*/
+
 
 	  /*
 //	  setBLDC_MotorsDIR(0, 0);
@@ -201,6 +442,26 @@ void SystemClock_Config(void)
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
+/* I2C1 init function */
+static void MX_I2C1_Init(void)
+{
+
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 400000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /* TIM12 init function */
 static void MX_TIM12_Init(void)
 {
@@ -259,11 +520,9 @@ static void MX_USART3_UART_Init(void)
      PG14   ------> USART6_TX
      PE1   ------> FMC_NBL1
      PE0   ------> FMC_NBL0
-     PB8   ------> I2C1_SCL
      PB3   ------> I2S3_CK
      PC12   ------> SDIO_CK
      PE5   ------> SAI1_SCK_A
-     PB9   ------> I2C1_SDA
      PB6   ------> QUADSPI_BK1_NCS
      PG15   ------> FMC_SDNCAS
      PD6   ------> SAI1_SD_A
@@ -414,14 +673,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : I2C1_SCL_Pin I2C1_SDA_Pin */
-  GPIO_InitStruct.Pin = I2C1_SCL_Pin|I2C1_SDA_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : I2S3_CK_Pin */
   GPIO_InitStruct.Pin = I2S3_CK_Pin;

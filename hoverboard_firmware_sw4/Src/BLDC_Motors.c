@@ -29,10 +29,10 @@ void initializeBLDC_Motors(TIM_HandleTypeDef* timer, uint32_t leftCh, uint32_t r
 
 void setBLDC_MotorsDIR(uint8_t leftDir, uint8_t rightDir){
 
-	if (leftDir==1 && rightDir==1){				//Forward
+	if (leftDir==0 && rightDir==0){				//Forward
 		HAL_GPIO_WritePin(GPIOC, LEFT_MOTOR_DIR_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIOC, RIGHT_MOTOR_DIR_Pin, GPIO_PIN_RESET);
-	} else if(leftDir==0 && rightDir==0) {		//Backward
+	} else if(leftDir==1 && rightDir==1) {		//Backward
 		HAL_GPIO_WritePin(GPIOC, LEFT_MOTOR_DIR_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(GPIOC, RIGHT_MOTOR_DIR_Pin, GPIO_PIN_SET);
 	} else if(leftDir==1 && rightDir==0) {		//Left
@@ -42,6 +42,7 @@ void setBLDC_MotorsDIR(uint8_t leftDir, uint8_t rightDir){
 	}
 
 }
+
 
 void setPwmDuty(TIM_HandleTypeDef* timer, uint32_t channel, uint8_t duty) {
 	switch(channel){
@@ -61,3 +62,15 @@ void setBLDC_MotorsPower(int32_t left, int32_t right) {
 	leftPower = left;
 	rightPower = right;
 }
+
+void Set_Left_Motor_Speed(int32_t left) {
+	setPwmDuty(BLDC_MotorsTimer, leftChannel, left);
+	leftPower = left;
+}
+
+
+void Set_Right_Motor_Speed(int32_t right) {
+	setPwmDuty(BLDC_MotorsTimer, rightChannel, right);
+	rightPower = right;
+}
+

@@ -58,8 +58,8 @@
 #define FMC_NBL1_GPIO_Port GPIOE
 #define FMC_NBL0_Pin GPIO_PIN_0
 #define FMC_NBL0_GPIO_Port GPIOE
-#define I2C1_SCL_Pin GPIO_PIN_8
-#define I2C1_SCL_GPIO_Port GPIOB
+#define SCL_Pin GPIO_PIN_8
+#define SCL_GPIO_Port GPIOB
 #define I2S3_CK_Pin GPIO_PIN_3
 #define I2S3_CK_GPIO_Port GPIOB
 #define uSD_CLK_Pin GPIO_PIN_12
@@ -70,8 +70,8 @@
 #define SWDIO_GPIO_Port GPIOA
 #define SAI1_SCKA_Pin GPIO_PIN_5
 #define SAI1_SCKA_GPIO_Port GPIOE
-#define I2C1_SDA_Pin GPIO_PIN_9
-#define I2C1_SDA_GPIO_Port GPIOB
+#define SDA_Pin GPIO_PIN_9
+#define SDA_GPIO_Port GPIOB
 #define OTG_FS1_OverCurrent_Pin GPIO_PIN_7
 #define OTG_FS1_OverCurrent_GPIO_Port GPIOB
 #define QSPI_BK1_NCS_Pin GPIO_PIN_6
