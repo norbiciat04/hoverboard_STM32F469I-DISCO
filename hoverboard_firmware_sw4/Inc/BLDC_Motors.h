@@ -9,6 +9,7 @@
 #define BLDC_MOTORS_H_
 
 #include "stm32f4xx_hal.h"
+#include "stdbool.h"
 
 //????
 //static const int32_t LED_POWER_RETAIN = -1;
@@ -20,14 +21,28 @@
 #define R_MOT_FORWARD	HAL_GPIO_WritePin(GPIOC, RIGHT_MOTOR_DIR_Pin, GPIO_PIN_RESET)
 #define R_MOT_BACKWARD	HAL_GPIO_WritePin(GPIOC, RIGHT_MOTOR_DIR_Pin, GPIO_PIN_SET)
 
-void setPwmDuty(TIM_HandleTypeDef* timer, uint32_t channel, uint8_t duty);
-void initializeBLDC_Motors(TIM_HandleTypeDef* timer, uint32_t leftCh, uint32_t rightCh);
-void setBLDC_MotorsPower(int32_t left, int32_t right);
-void shutdownBLDC_Motors(void);
-void setBLDC_MotorsDIR(uint8_t leftDir, uint8_t rightDir);
+#define FORWARD		1
+#define BACKWARD	0
 
-void Set_Left_Motor_Speed(int32_t left);
-void Set_Right_Motor_Speed(int32_t right);
+#define LEFT_MOTOR	1
+#define RIGHT_MOTOR	2
+#define BOTH_MOTORS	3
+
+void setPwmDuty(TIM_HandleTypeDef* timer, uint32_t channel, uint8_t duty);
+
+void Initialize_LR_Motors(TIM_HandleTypeDef* timer, uint32_t leftCh, uint32_t rightCh);
+
+void Set_LR_Motors_DIR(uint8_t leftDir, uint8_t rightDir);
+void Set_LR_Motors_Speed(uint8_t left, uint8_t right);
+void Stop_LR_Motors(void);
+
+void Set_Left_Motor_Speed(uint8_t left);
+void Set_Left_Motor_DIR(uint8_t dir);
+
+void Set_Right_Motor_Speed(uint8_t right);
+void Set_Right_Motor_DIR(uint8_t dir);
+
+void Control_Motor_by_PID(int8_t motor, int8_t pid_value);
 
 /*
 int32_t getLedRedPower(void);

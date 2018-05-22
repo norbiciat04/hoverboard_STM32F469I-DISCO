@@ -46,18 +46,61 @@
 #include "BLDC_Motors.h"
 #include "tm_stm32_mpu6050.h"
 #include "tm_stm32_delay.h"
+#include "matrix.h"
+#include "kalman_filter.h"
+#include "PID_regulator.h"
+#include "tensometer.h"
 
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
+TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim12;
 
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+uint8_t allow = 0;
+uint8_t Received[4] = "0";
+uint8_t receive;
+uint8_t rec_i = 0;
+uint8_t temp_char[3];
+
+//////////////////////Temporary
+float kal_result = 0;
+float angle = 0;		//before kalman
+int32_t d_kal_result = 0;
+int32_t d_angle = 0;		//before kalman
+
+int8_t pid = 0;
+uint32_t tenso = 0;
+uint32_t co = 0;
+
+TM_MPU6050_t MPU6050_Data0;
+
+
+//temporary for tuning PID and Kalman
+uint8_t Kp_t;                 // (P)roportional Tuning Parameter
+uint8_t Ki_t;					// (I)ntegral Tuning Parameter
+uint8_t Kd_t;					// (D)erivative Tuning Parameter
+
+//uint8_t std_dev_v_t = std_dev_v;
+//uint8_t std_dev_w_t = std_dev_w;
+//Temporary
+
+////////////////////////Temporary
+
+//temporary for tuning PID and Kalman
+extern float Kp;                 // (P)roportional Tuning Parameter
+extern float Ki;					// (I)ntegral Tuning Parameter
+extern float Kd;					// (D)erivative Tuning Parameter
+
+extern float std_dev_v;
+extern float std_dev_w;
+//Temporary
 
 /* USER CODE END PV */
 
@@ -67,13 +110,75 @@ static void MX_GPIO_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM12_Init(void);
 static void MX_I2C1_Init(void);
-                                    
+static void MX_TIM6_Init(void);
+
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
                                 
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+ if(htim->Instance == TIM6){ // Je¿eli przerwanie pochodzi od timera 6
+
+
+	 for(rec_i = 0;rec_i<3;++rec_i)
+		 	 temp_char[rec_i] = Received[rec_i+1];
+
+//	 Kp = atoi(temp_char);
+	 if (Received[0] == 80 || Received[0] == 112)	//P
+		 Kp = atoi(temp_char);
+	 if (Received[0] == 73 || Received[0] == 105)	//I
+		 Ki = atoi(temp_char);
+	 if (Received[0] == 68 || Received[0] == 100)	//D
+		 Kd = atoi(temp_char);
+
+	 //Temporary
+	 Kp_t = Kp;                // (P)roportional Tuning Parameter
+	 Ki_t = Ki;					// (I)ntegral Tuning Parameter
+	 Kd_t = Kd;					// (D)erivative Tuning Parameter
+//	 receive = atoi(Received);
+//	 Ki = receive;
+
+
+	 uint8_t str[50];
+	 uint16_t size;
+ //	  size = sprintf(str, "%d\r\n", HAL_GetTick());
+ //	  HAL_UART_Transmit_IT(&huart3, str, size);
+
+
+ 	  TM_MPU6050_ReadAll(&MPU6050_Data0);
+	  kal_result = kalman_filter_get_est(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z, MPU6050_Data0.Gyroscope_Y);
+	  d_kal_result = kal_result;
+
+	  angle = angle_before_kalman(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z);
+	  d_angle = angle;
+
+	  pid = PID_calculate(0,angle);
+	  Control_Motor_by_PID(BOTH_MOTORS, pid);
+  	  size = sprintf(str, "%d %d %d  %d  %d %d %d %d %d\r\n", Kp_t, Ki_t, Kd_t, pid, d_angle, d_kal_result, -100, 100, HAL_GetTick());
+  	  HAL_UART_Transmit_IT(&huart3, str, size);
+
+
+	 allow=1;
+ }
+}
+
+/*
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+
+ uint8_t Data[40]; // Tablica przechowujaca wysylana wiadomosc.
+ uint16_t size = 0; // Rozmiar wysylanej wiadomosci
+
+// size = sprintf(Data, "Odebrana wiadomosc: %s\n\r",Received);
+
+ size = sprintf(Data, "%s\n\r",Received);
+
+ HAL_UART_Transmit_IT(&huart3, Data, size); // Rozpoczecie nadawania danych z wykorzystaniem przerwan
+ HAL_UART_Receive_IT(&huart3, Received, 1); // Ponowne w³¹czenie nas³uchiwania
+}
+*/
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -108,8 +213,17 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM12_Init();
   MX_I2C1_Init();
+  MX_TIM6_Init();
 
   /* USER CODE BEGIN 2 */
+
+  /*
+//  __disable_irq();
+  HX711 hx711 = {HX_SCK_GPIO_Port, HX_DATA_GPIO_Port, HX_SCK_Pin, HX_DATA_Pin, 0, 1};
+  hx711 = HX711_Tare(hx711, 10);
+  HX711_Init(hx711);
+//  __enable_irq();
+*/
 
   //uart example
   uint8_t i = 9;
@@ -119,12 +233,13 @@ int main(void)
 
 
   //BLDC_Motors Init
-  initializeBLDC_Motors(&htim12, TIM_CHANNEL_1, TIM_CHANNEL_2);
-  setBLDC_MotorsPower(0,0);
+  Initialize_LR_Motors(&htim12, TIM_CHANNEL_1, TIM_CHANNEL_2);
+  Stop_LR_Motors();
+
 
   //MPU6050 Init
 
-  TM_MPU6050_t MPU6050_Data0;
+ // TM_MPU6050_t MPU6050_Data0;
   TM_MPU6050_t MPU6050_Data1;
   uint8_t sensor1 = 0, sensor2 = 0;
   char str[120];
@@ -134,7 +249,7 @@ int main(void)
           // Display message to user
   //        TM_USART_Puts(USART1, "MPU6050 sensor 0 is ready to use!\n");
           size = sprintf(str, "MPU6050 sensor 0 is ready to use!\n", i);
-    	  HAL_UART_Transmit(&huart3, str, size, 1000);
+  //  	  HAL_UART_Transmit(&huart3, str, size, 1000);
           // Sensor 1 OK
           sensor1 = 1;
   }
@@ -144,12 +259,62 @@ int main(void)
         // Display message to user
     //    TM_USART_Puts(USART1, "MPU6050 sensor 1 is ready to use!\n");
         size = sprintf(str, "MPU6050 sensor 1 is ready to use!\n", i);
-  	  HAL_UART_Transmit(&huart3, str, size, 1000);
+ // 	  HAL_UART_Transmit(&huart3, str, size, 1000);
         // Sensor 2 OK
         sensor2 = 1;
   }
 
 
+
+
+
+
+
+  //Kalman filter init
+  TM_MPU6050_ReadAll(&MPU6050_Data0);
+  kalman_filter_init(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z);
+
+
+  //Init timer od wywo³ania pomiaru i PID
+  HAL_TIM_Base_Start_IT(&htim6);
+
+
+  int8_t last_v = 0;
+    /*
+    //program do wyznaczenia transmitancji
+
+    HAL_Delay(1000);
+    for (uint8_t i = 0;i<200;i++){
+
+    	HAL_Delay(5);
+  		TM_MPU6050_ReadAll(&MPU6050_Data0);
+		kal_result = kalman_filter_get_est(MPU6050_Data0.Accelerometer_Y, MPU6050_Data0.Accelerometer_Z, MPU6050_Data0.Gyroscope_Z);
+		d_kal_result = kal_result;
+
+		angle = angle_before_kalman(MPU6050_Data0.Accelerometer_Y, MPU6050_Data0.Accelerometer_Z);
+		d_angle = angle;
+		size = sprintf(str, "%d %d\r\n", d_angle, d_kal_result);
+		HAL_UART_Transmit_IT(&huart3, str, size);
+
+  	  if (i==10)
+  	  {
+  		  Set_Left_Motor_DIR(FORWARD);
+  		  Set_Right_Motor_DIR(FORWARD);
+  		  Set_Left_Motor_Speed(20);
+  		  Set_Right_Motor_Speed(20);
+  	  }
+
+  	  if (i>198)
+  	  {
+ // 		Set_Left_Motor_Speed(0);
+  //		Set_Right_Motor_Speed(0);
+//  		Set_LR_Motors_Speed(0,0);
+  		Stop_LR_Motors();
+  	  }
+
+  	}
+
+*/
 
   /* USER CODE END 2 */
 
@@ -160,26 +325,78 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+
+
 /*
-      size = sprintf(data, "kutaczan %d\r\n", 4);
-      HAL_UART_Transmit_IT(&huart3, data, size);
-	  HAL_Delay(500);
+ Struktura docelowa g³ównej pêtli:
+ Pomiar MPU 1 i 2
+ Filtracja 1 i 2 kalmanem
+ Obliczenie PIDów dla 1 i 2
+ Wysterowanie silników L i R za pomoc¹ wartoœci PIDów 1 i 2
+ */
+
+	  /*
+	  //Pomiar tensometryczny
+	  co++;
+	  tenso = HX711_Value(hx711);
+  	  size = sprintf(str, "%d %d\r\n", tenso, co);
+  	  HAL_UART_Transmit_IT(&huart3, str, size);
+  	  HAL_Delay(200);
+	  */
+
+
+  	  HAL_UART_Receive_IT(&huart3, Received, 4);
+
+/*
+	  if (allow ==1){
+		 //Temporary
+		 Kp_t = Kp;                // (P)roportional Tuning Parameter
+		 Ki_t = Ki;					// (I)ntegral Tuning Parameter
+		 Kd_t = Kd;					// (D)erivative Tuning Parameter
+	  //Ma³y segway
+
+	  	  TM_MPU6050_ReadAll(&MPU6050_Data0);
+	  	  kal_result = kalman_filter_get_est(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z, MPU6050_Data0.Gyroscope_Y);
+	  	  d_kal_result = kal_result;
+
+		  angle = angle_before_kalman(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z);
+		  d_angle = angle;
+
+	  	  pid = PID_calculate(0,kal_result);
+	  	  Control_Motor_by_PID(BOTH_MOTORS, pid);
+
+	  	  size = sprintf(str, "%d %d %d  %d  %d %d %d %d %d\r\n", Kp_t, Ki_t, Kd_t, pid, d_angle, d_kal_result, -100, 100, HAL_GetTick());
+	  	  HAL_UART_Transmit_IT(&huart3, str, size);
+		  allow=0;
+	   }
 */
 
 
-	       if (TM_DELAY_Time() >= 100) {
+	//  Control_Motor_by_PID(BOTH_MOTORS, 60);
+
+
+/*
+	  	  // obliczanie k¹ta i filtracja kalmanem
+	       if (TM_DELAY_Time() >= 5) {
 	           TM_DELAY_SetTime(0);
                TM_MPU6050_ReadAll(&MPU6050_Data0);
-			   size = sprintf(str, "%d %d %d %d %d %d\r\n",
-					   MPU6050_Data0.Accelerometer_X,
-					   MPU6050_Data0.Accelerometer_Y,
-					   MPU6050_Data0.Accelerometer_Z,
-	                   MPU6050_Data0.Gyroscope_X,
-	                   MPU6050_Data0.Gyroscope_Y,
-	                   MPU6050_Data0.Gyroscope_Z
-					   );
+
+
+			   kal_result = kalman_filter_get_est(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z, MPU6050_Data0.Gyroscope_Y);
+			   d_kal_result = kal_result;
+
+			   angle = angle_before_kalman(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z);
+			   d_angle = angle;
+			   size = sprintf(str, "%d %d\r\n", d_angle, d_kal_result);
+	//		   Set_Left_Motor_Speed(abs(d_kal_result));
+	//		   Set_Right_Motor_Speed(abs(d_angle));
 			   HAL_UART_Transmit_IT(&huart3, str, size);
 	       }
+
+*/
+
+
+
 /*
       //Every 500ms
        if (TM_DELAY_Time() >= 500) {
@@ -261,105 +478,6 @@ int main(void)
 
  	//  setBLDC_MotorsPower(15, 15);
 
-/*
-	   Set_Left_Motor_Speed(1);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(5);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(10);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(15);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(20);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(25);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(30);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(35);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(40);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(45);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(50);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(55);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(60);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(65);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(70);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(75);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(80);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(90);
-	   HAL_Delay(30);
-	   Set_Left_Motor_Speed(100);
-	   HAL_Delay(5000);
-	   Set_Left_Motor_Speed(90);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(80);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(70);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(60);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(50);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(40);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(30);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(10);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(5);
-	   HAL_Delay(1000);
-	   /*
-	   Set_Left_Motor_Speed(15);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(16);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(17);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(18);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(17);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(16);
-	   HAL_Delay(50);
-	   Set_Left_Motor_Speed(15);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(14);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(13);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(12);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(11);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(10);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(9);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(8);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(7);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(6);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(5);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(4);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(3);
-	   HAL_Delay(10);
-	   Set_Left_Motor_Speed(2);
-	   HAL_Delay(10);
-*/
 
 	  /*
 	  HAL_UART_Transmit_IT(&huart3, data, size);
@@ -456,6 +574,30 @@ static void MX_I2C1_Init(void)
   hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
   hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
   if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* TIM6 init function */
+static void MX_TIM6_Init(void)
+{
+
+  TIM_MasterConfigTypeDef sMasterConfig;
+
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 16000;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 5-1;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -634,7 +776,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, LEFT_MOTOR_DIR_Pin|RIGHT_MOTOR_DIR_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, OTG_FS1_PowerSwitchOn_Pin|EXT_RESET_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, OTG_FS1_PowerSwitchOn_Pin|EXT_RESET_Pin|HX_SCK_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LCD_BL_CTRL_GPIO_Port, LCD_BL_CTRL_Pin, GPIO_PIN_RESET);
@@ -761,6 +903,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : HX_DATA_Pin */
+  GPIO_InitStruct.Pin = HX_DATA_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(HX_DATA_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : A0_Pin A1_Pin A2_Pin A3_Pin 
                            A4_Pin A5_Pin A6_Pin A9_Pin 
                            A7_Pin A8_Pin SDNMT48LC4M32B2B5_6A_RAS_RAS___Pin */
@@ -860,8 +1008,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
   HAL_GPIO_Init(SDNWE_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : OTG_FS1_PowerSwitchOn_Pin EXT_RESET_Pin */
-  GPIO_InitStruct.Pin = OTG_FS1_PowerSwitchOn_Pin|EXT_RESET_Pin;
+  /*Configure GPIO pins : OTG_FS1_PowerSwitchOn_Pin EXT_RESET_Pin HX_SCK_Pin */
+  GPIO_InitStruct.Pin = OTG_FS1_PowerSwitchOn_Pin|EXT_RESET_Pin|HX_SCK_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

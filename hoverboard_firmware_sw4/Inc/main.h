@@ -92,6 +92,8 @@
 #define FMC_NBL2_GPIO_Port GPIOI
 #define LED3_Pin GPIO_PIN_5
 #define LED3_GPIO_Port GPIOD
+#define HX_DATA_Pin GPIO_PIN_3
+#define HX_DATA_GPIO_Port GPIOD
 #define D3_Pin GPIO_PIN_1
 #define D3_GPIO_Port GPIOD
 #define D27_Pin GPIO_PIN_3
@@ -252,6 +254,8 @@
 #define D10_GPIO_Port GPIOE
 #define STLK_TX_Pin GPIO_PIN_11
 #define STLK_TX_GPIO_Port GPIOB
+#define HX_SCK_Pin GPIO_PIN_14
+#define HX_SCK_GPIO_Port GPIOB
 #define RIGHT_MOTOR_PWM_Pin GPIO_PIN_15
 #define RIGHT_MOTOR_PWM_GPIO_Port GPIOB
 
