@@ -75,7 +75,7 @@ float angle = 0;		//before kalman
 int32_t d_kal_result = 0;
 int32_t d_angle = 0;		//before kalman
 
-int8_t pid = 0;
+int16_t pid = 0;
 uint32_t tenso = 0;
 uint32_t co = 0;
 
@@ -100,6 +100,7 @@ extern float Kd;					// (D)erivative Tuning Parameter
 
 extern float std_dev_v;
 extern float std_dev_w;
+extern uint8_t lastOut;
 //Temporary
 
 /* USER CODE END PV */
@@ -155,14 +156,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	  angle = angle_before_kalman(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z);
 	  d_angle = angle;
 
-	  pid = PID_calculate(0,angle);
+	  pid = PID_calculate(-1,kal_result);
 	  Control_Motor_by_PID(BOTH_MOTORS, pid);
-  	  size = sprintf(str, "%d %d %d  %d  %d %d %d %d %d\r\n", Kp_t, Ki_t, Kd_t, pid, d_angle, d_kal_result, -100, 100, HAL_GetTick());
+
+  	  size = sprintf(str, "%d %d %d  %d  %d %d %d %d %d\r\n", Kp_t, Ki_t, Kd_t, pid, d_angle, d_kal_result, -1000, 1000, lastOut);
   	  HAL_UART_Transmit_IT(&huart3, str, size);
 
-
-	 allow=1;
+	 /*
+	 uint8_t str[50];
+	 uint16_t size;
+ 	  size = sprintf(str, "%d\r\n", HAL_GetTick());
+ 	  HAL_UART_Transmit_IT(&huart3, str, size);
+*/
+//	 allow=1;
  }
+
+
+
 }
 
 /*
@@ -613,7 +623,7 @@ static void MX_TIM12_Init(void)
   htim12.Instance = TIM12;
   htim12.Init.Prescaler = 16;
   htim12.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim12.Init.Period = 100-1;
+  htim12.Init.Period = 1000-1;
   htim12.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   if (HAL_TIM_PWM_Init(&htim12) != HAL_OK)
   {

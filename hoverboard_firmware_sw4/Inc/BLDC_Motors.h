@@ -28,21 +28,21 @@
 #define RIGHT_MOTOR	2
 #define BOTH_MOTORS	3
 
-void setPwmDuty(TIM_HandleTypeDef* timer, uint32_t channel, uint8_t duty);
+void setPwmDuty(TIM_HandleTypeDef* timer, uint32_t channel, uint16_t duty);
 
 void Initialize_LR_Motors(TIM_HandleTypeDef* timer, uint32_t leftCh, uint32_t rightCh);
 
 void Set_LR_Motors_DIR(uint8_t leftDir, uint8_t rightDir);
-void Set_LR_Motors_Speed(uint8_t left, uint8_t right);
+void Set_LR_Motors_Speed(uint16_t left, uint16_t right);
 void Stop_LR_Motors(void);
 
-void Set_Left_Motor_Speed(uint8_t left);
+void Set_Left_Motor_Speed(uint16_t left);
 void Set_Left_Motor_DIR(uint8_t dir);
 
-void Set_Right_Motor_Speed(uint8_t right);
+void Set_Right_Motor_Speed(uint16_t right);
 void Set_Right_Motor_DIR(uint8_t dir);
 
-void Control_Motor_by_PID(int8_t motor, int8_t pid_value);
+void Control_Motor_by_PID(int8_t motor, int16_t pid_value);
 
 /*
 int32_t getLedRedPower(void);

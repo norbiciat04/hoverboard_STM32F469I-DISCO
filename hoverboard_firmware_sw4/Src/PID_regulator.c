@@ -6,32 +6,33 @@
  */
 
 #include "PID_regulator.h"
-#include <stdio.h>
 #include "stm32f4xx_hal.h"
 
-#define ERR_SUM_MAX		100
+#define ERR_SUM_MAX		1000
 
-float Kp = 5;                   // (P)roportional Tuning Parameter
-float Ki = 7;					// (I)ntegral Tuning Parameter
-float Kd = 0.7;					// (D)erivative Tuning Parameter
+float Kp = 40;                   // (P)roportional Tuning Parameter
+float Ki = 0;					// (I)ntegral Tuning Parameter
+float Kd = 3;					// (D)erivative Tuning Parameter
 
 float last_angle;               // Keeps track of error over time
 float iTerm;              		// Used to accumulate error (integral)
 
-int8_t outMax = 100;
-int8_t outMin = -100;
+int16_t outMax = 1000;
+int16_t outMin = -1000;
 
+uint8_t lastOut = 16;
 
 //float targetAngle = 0;       	// Can be adjusted according to centre of gravity
 
 
-int8_t PID_calculate(float set_angle, float angle)
+int16_t PID_calculate(float set_angle, float angle)
 {
 
-	int8_t PID_Result = 0;
+	int16_t PID_Result = 0;
     // Calculate time since last time PID was called (~10ms)
     unsigned long this_Time = HAL_GetTick();	//TODO pobrac czas z systicka
     float timeChange = this_Time - last_Time;
+    lastOut = timeChange;
 
 	// Calculate Error
 	float error = set_angle - angle;
@@ -54,8 +55,8 @@ int8_t PID_calculate(float set_angle, float angle)
     float PID_Value = pTerm + iTerm - dTerm;
 
     // Limits PID to max motor speed
-    if (PID_Value > 100) PID_Value = 100;
-    else if (PID_Value < -100) PID_Value = -100;
+    if (PID_Value > 1000) PID_Value = 1000;
+    else if (PID_Value < -1000) PID_Value = -1000;
 
 /*
 	   int8_t PID_Result = 0;

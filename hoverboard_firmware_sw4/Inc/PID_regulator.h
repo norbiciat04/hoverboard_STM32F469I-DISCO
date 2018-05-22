@@ -12,7 +12,7 @@
 
 unsigned long last_Time;             // Time since PID was called last (should be ~10ms)
 
-int8_t PID_calculate(float set_angle, float angle);
+int16_t PID_calculate(float set_angle, float angle);
 
 
 #endif /* PID_REGULATOR_H_ */

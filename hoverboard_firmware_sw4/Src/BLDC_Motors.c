@@ -14,8 +14,8 @@ static TIM_HandleTypeDef* BLDC_MotorsTimer;
 static uint32_t leftChannel;
 static uint32_t rightChannel;
 
-static uint8_t leftPower = 0;
-static uint8_t rightPower = 0;
+static uint16_t leftPower = 0;
+static uint16_t rightPower = 0;
 
 
 void Initialize_LR_Motors(TIM_HandleTypeDef* timer, uint32_t leftCh, uint32_t rightCh) {
@@ -45,7 +45,7 @@ void Set_LR_Motors_DIR(uint8_t leftDir, uint8_t rightDir){
 }
 
 
-void setPwmDuty(TIM_HandleTypeDef* timer, uint32_t channel, uint8_t duty) {
+void setPwmDuty(TIM_HandleTypeDef* timer, uint32_t channel, uint16_t duty) {
 	switch(channel){
 		case TIM_CHANNEL_1:
 			timer->Instance->CCR1 = duty;
@@ -56,7 +56,7 @@ void setPwmDuty(TIM_HandleTypeDef* timer, uint32_t channel, uint8_t duty) {
 	}
 }
 
-void Set_LR_Motors_Speed(uint8_t left, uint8_t right) {
+void Set_LR_Motors_Speed(uint16_t left, uint16_t right) {
 
 	setPwmDuty(BLDC_MotorsTimer, leftChannel, left);
 	setPwmDuty(BLDC_MotorsTimer, rightChannel, right);
@@ -70,12 +70,12 @@ void Stop_LR_Motors(void) {
 	setPwmDuty(BLDC_MotorsTimer, rightChannel, 0);
 }
 
-void Set_Left_Motor_Speed(uint8_t left) {
+void Set_Left_Motor_Speed(uint16_t left) {
 	setPwmDuty(BLDC_MotorsTimer, leftChannel, left);
 	leftPower = left;
 }
 
-void Set_Right_Motor_Speed(uint8_t right) {
+void Set_Right_Motor_Speed(uint16_t right) {
 	setPwmDuty(BLDC_MotorsTimer, rightChannel, right);
 	rightPower = right;
 }
@@ -110,8 +110,8 @@ void Set_Right_Motor_DIR(uint8_t dir)
 	 }
 }
 
-void Control_Motor_by_PID(int8_t motor, int8_t pid_value) {
-	int8_t pid_value_s = pid_value;
+void Control_Motor_by_PID(int8_t motor, int16_t pid_value) {
+	int16_t pid_value_s = pid_value;
 	switch(motor){
 		case LEFT_MOTOR:
 			if(pid_value_s > 0){
@@ -143,8 +143,8 @@ void Control_Motor_by_PID(int8_t motor, int8_t pid_value) {
 				Set_Right_Motor_DIR(BACKWARD);
 				pid_value_s = -pid_value_s;
 			}
-			if(pid_value_s <20)
-				pid_value_s = 20;
+			if(pid_value_s <350)
+				pid_value_s = 350;
 			setPwmDuty(BLDC_MotorsTimer, leftChannel, pid_value_s);
 			setPwmDuty(BLDC_MotorsTimer, rightChannel, pid_value_s);
 			leftPower = pid_value_s;

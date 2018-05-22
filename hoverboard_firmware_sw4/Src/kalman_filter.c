@@ -48,7 +48,7 @@ void kalman_filter_init(float acc_1, float acc_2)
 	   C[0] = 1;
 	   C[1] = 0;
 
-	   std_dev_v = 5;
+	   std_dev_v = 6;
 	   std_dev_w = 1;
 	   V[0] = std_dev_v*std_dev_v*dt;
 	   V[1] = 0;
