@@ -123,6 +123,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
+//this will be replace to some sensor of user standing on board
 if( HAL_GPIO_ReadPin(BUTTON_START_GPIO_Port, BUTTON_START_Pin) == GPIO_PIN_RESET) {
 
  if(htim->Instance == TIM6){ // Je¿eli przerwanie pochodzi od timera 6
