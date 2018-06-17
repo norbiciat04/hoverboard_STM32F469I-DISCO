@@ -123,7 +123,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
-if( HAL_GPIO_ReadPin(BUTTON_START_GPIO_Port, BUTTON_START_Pin) == GPIO_PIN_RESET) {
+// if( HAL_GPIO_ReadPin(BUTTON_START_GPIO_Port, BUTTON_START_Pin) == GPIO_PIN_RESET) {
 
  if(htim->Instance == TIM6){ // Je¿eli przerwanie pochodzi od timera 6
 
@@ -157,10 +157,10 @@ if( HAL_GPIO_ReadPin(BUTTON_START_GPIO_Port, BUTTON_START_Pin) == GPIO_PIN_RESET
 //	 {
 
  	  TM_MPU6050_ReadAll(&MPU6050_Data0);
-	  kal_result = kalman_filter_get_est(MPU6050_Data0.Accelerometer_Y, MPU6050_Data0.Accelerometer_Z, MPU6050_Data0.Gyroscope_X);
+	  kal_result = kalman_filter_get_est(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z, MPU6050_Data0.Gyroscope_Y);
 	  d_kal_result = kal_result;
 
-	  angle = angle_before_kalman(MPU6050_Data0.Accelerometer_Y, MPU6050_Data0.Accelerometer_Z);
+	  angle = angle_before_kalman(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z);
 	  d_angle = angle;
 
 	  pid = PID_calculate(0,kal_result);
@@ -184,13 +184,13 @@ if( HAL_GPIO_ReadPin(BUTTON_START_GPIO_Port, BUTTON_START_Pin) == GPIO_PIN_RESET
 
 
  }
-
+/*
  } else {
 	 Stop_LR_Motors();
 
 }
 
-
+*/
 }
 
 /*
@@ -299,7 +299,7 @@ int main(void)
 
   //Kalman filter init
   TM_MPU6050_ReadAll(&MPU6050_Data0);
-  kalman_filter_init(MPU6050_Data0.Accelerometer_Y, MPU6050_Data0.Accelerometer_Z);
+  kalman_filter_init(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z);
 
 
   //Init timer od wywo³ania pomiaru i PID
