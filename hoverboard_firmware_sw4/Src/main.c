@@ -81,6 +81,7 @@ uint32_t co = 0;
 
 TM_MPU6050_t MPU6050_Data0;
 
+HX711 hx711 = {HX_SCK_GPIO_Port, HX_DATA_GPIO_Port, HX_SCK_Pin, HX_DATA_Pin, 0, 1};
 
 //temporary for tuning PID and Kalman
 uint8_t Kp_t;                 // (P)roportional Tuning Parameter
@@ -121,9 +122,12 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+
+if( HAL_GPIO_ReadPin(BUTTON_START_GPIO_Port, BUTTON_START_Pin) == GPIO_PIN_RESET) {
+
  if(htim->Instance == TIM6){ // Je¿eli przerwanie pochodzi od timera 6
 
-
+/*
 	 for(rec_i = 0;rec_i<3;++rec_i)
 		 	 temp_char[rec_i] = Received[rec_i+1];
 
@@ -147,20 +151,28 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	 uint16_t size;
  //	  size = sprintf(str, "%d\r\n", HAL_GetTick());
  //	  HAL_UART_Transmit_IT(&huart3, str, size);
+*/
 
+//	 if (tenso>11620000)
+//	 {
 
  	  TM_MPU6050_ReadAll(&MPU6050_Data0);
-	  kal_result = kalman_filter_get_est(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z, MPU6050_Data0.Gyroscope_Y);
+	  kal_result = kalman_filter_get_est(MPU6050_Data0.Accelerometer_Y, MPU6050_Data0.Accelerometer_Z, MPU6050_Data0.Gyroscope_X);
 	  d_kal_result = kal_result;
 
-	  angle = angle_before_kalman(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z);
+	  angle = angle_before_kalman(MPU6050_Data0.Accelerometer_Y, MPU6050_Data0.Accelerometer_Z);
 	  d_angle = angle;
 
-	  pid = PID_calculate(-1,kal_result);
+	  pid = PID_calculate(0,kal_result);
 	  Control_Motor_by_PID(BOTH_MOTORS, pid);
 
+	  uint8_t str[50];
+	  uint16_t size;
   	  size = sprintf(str, "%d %d %d  %d  %d %d %d %d %d\r\n", Kp_t, Ki_t, Kd_t, pid, d_angle, d_kal_result, -1000, 1000, lastOut);
+ // 	  size = sprintf(str, "%d %d %d %d %d\r\n", d_angle, d_kal_result, -60, 60, lastOut);
   	  HAL_UART_Transmit_IT(&huart3, str, size);
+
+//	 }
 
 	 /*
 	 uint8_t str[50];
@@ -169,8 +181,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
  	  HAL_UART_Transmit_IT(&huart3, str, size);
 */
 //	 allow=1;
+
+
  }
 
+ } else {
+	 Stop_LR_Motors();
+
+}
 
 
 }
@@ -227,13 +245,12 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
-  /*
+
 //  __disable_irq();
-  HX711 hx711 = {HX_SCK_GPIO_Port, HX_DATA_GPIO_Port, HX_SCK_Pin, HX_DATA_Pin, 0, 1};
   hx711 = HX711_Tare(hx711, 10);
   HX711_Init(hx711);
 //  __enable_irq();
-*/
+
 
   //uart example
   uint8_t i = 9;
@@ -282,7 +299,7 @@ int main(void)
 
   //Kalman filter init
   TM_MPU6050_ReadAll(&MPU6050_Data0);
-  kalman_filter_init(MPU6050_Data0.Accelerometer_X, MPU6050_Data0.Accelerometer_Z);
+  kalman_filter_init(MPU6050_Data0.Accelerometer_Y, MPU6050_Data0.Accelerometer_Z);
 
 
   //Init timer od wywo³ania pomiaru i PID
@@ -345,17 +362,16 @@ int main(void)
  Wysterowanie silników L i R za pomoc¹ wartoœci PIDów 1 i 2
  */
 
-	  /*
+
 	  //Pomiar tensometryczny
-	  co++;
-	  tenso = HX711_Value(hx711);
-  	  size = sprintf(str, "%d %d\r\n", tenso, co);
-  	  HAL_UART_Transmit_IT(&huart3, str, size);
-  	  HAL_Delay(200);
-	  */
+//	  tenso = HX711_Value(hx711);
+  //	  size = sprintf(str, "%d\r\n", tenso);
+  //	  HAL_UART_Transmit_IT(&huart3, str, size);
+  	//  HAL_Delay(200);
 
 
-  	  HAL_UART_Receive_IT(&huart3, Received, 4);
+
+//  	  HAL_UART_Receive_IT(&huart3, Received, 4);
 
 /*
 	  if (allow ==1){
@@ -905,6 +921,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
   HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : BUTTON_START_Pin */
+  GPIO_InitStruct.Pin = BUTTON_START_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(BUTTON_START_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LED3_Pin LED2_Pin */
   GPIO_InitStruct.Pin = LED3_Pin|LED2_Pin;

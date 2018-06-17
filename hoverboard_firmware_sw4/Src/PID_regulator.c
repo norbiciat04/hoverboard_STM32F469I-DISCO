@@ -10,10 +10,11 @@
 
 #define ERR_SUM_MAX		1000
 
-float Kp = 40;                   // (P)roportional Tuning Parameter
-float Ki = 0;					// (I)ntegral Tuning Parameter
-float Kd = 3;					// (D)erivative Tuning Parameter
+float Kp = 20;                   // (P)roportional Tuning Parameter
+float Ki = 0.05;					// (I)ntegral Tuning Parameter
+float Kd = 0;					// (D)erivative Tuning Parameter
 
+//max angle will be -40 & +40
 float last_angle;               // Keeps track of error over time
 float iTerm;              		// Used to accumulate error (integral)
 

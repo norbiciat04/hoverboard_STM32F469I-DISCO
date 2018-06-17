@@ -90,6 +90,8 @@
 #define USB_FS1_P_GPIO_Port GPIOA
 #define FMC_NBL2_Pin GPIO_PIN_4
 #define FMC_NBL2_GPIO_Port GPIOI
+#define BUTTON_START_Pin GPIO_PIN_12
+#define BUTTON_START_GPIO_Port GPIOG
 #define LED3_Pin GPIO_PIN_5
 #define LED3_GPIO_Port GPIOD
 #define HX_DATA_Pin GPIO_PIN_3

@@ -35,7 +35,7 @@ void kalman_filter_init(float acc_1, float acc_2)
 	float acc_2_t = acc_2;
 
 	   /* Inicjalizacja zmiennych */
-	   dt = 0.005;
+	   dt = 0.005;			//depend on timer interrupt time
 
 	   A[0] = 1;
 	   A[1] = -dt;
@@ -48,8 +48,8 @@ void kalman_filter_init(float acc_1, float acc_2)
 	   C[0] = 1;
 	   C[1] = 0;
 
-	   std_dev_v = 6;
-	   std_dev_w = 1;
+	   std_dev_v = 1;
+	   std_dev_w = 4;
 	   V[0] = std_dev_v*std_dev_v*dt;
 	   V[1] = 0;
 	   V[2] = 0;

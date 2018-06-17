@@ -143,8 +143,8 @@ void Control_Motor_by_PID(int8_t motor, int16_t pid_value) {
 				Set_Right_Motor_DIR(BACKWARD);
 				pid_value_s = -pid_value_s;
 			}
-			if(pid_value_s <350)
-				pid_value_s = 350;
+			if(pid_value_s <10)
+				pid_value_s = 10;
 			setPwmDuty(BLDC_MotorsTimer, leftChannel, pid_value_s);
 			setPwmDuty(BLDC_MotorsTimer, rightChannel, pid_value_s);
 			leftPower = pid_value_s;
